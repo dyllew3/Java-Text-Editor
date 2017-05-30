@@ -1,4 +1,5 @@
-package Caching;
+package caching;
+
 
 public class Buffer {
 	

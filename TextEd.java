@@ -3,30 +3,38 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.*;
 
-import Caching.Buffer;
+import caching.Buffer;
+import caching.Cache;
 
 public class TextEd {
 	
-	public static final int WIDTH = 400;
-	public static final int HEIGHT = 400;
+	public static final int WIDTH = 1000;
+	public static final int HEIGHT = 1000;
 	private JFrame window;
 	private JTextArea text;
 	private JScrollPane textWindow;
 	private DocumentManager file;
+	private Cache history;
+	private Autosave a;
 	
 	
-	
+	//Autosave class uses multithreading to save the state of the document
 	private class Autosave implements Runnable{
 		
 		private JTextArea toSave;
 		private int saveFreq;
-		private String curState;
+		public String curState;
+		
 		
 		public Autosave(JTextArea toSave,int saveFreq) {
 			// TODO Auto-generated constructor stub
 			this.toSave = toSave;
 			this.saveFreq = saveFreq;
-			this.curState = toSave.getText();
+			if(toSave.getText() != null)
+				this.curState = new String(toSave.getText());
+			else
+				this.curState = "";
+			
 		}
 		
 		
@@ -40,11 +48,12 @@ public class TextEd {
 			// TODO Auto-generated method stub
 			while(true){
 				try{
+					
 					if(!curState.equals(toSave.getText())){
-						System.out.println(curState);
 						curState = toSave.getText();
+						history.saveStage(curState);
 					}
-					Thread.sleep(saveFreq);
+					Thread.sleep(1000);
 				}
 				catch(InterruptedException e){
 					e.printStackTrace();
@@ -63,17 +72,22 @@ public class TextEd {
 	
 	public TextEd(boolean open){
 		
+		history = new Cache();
 		file = new DocumentManager();
 		String title = "new";
 		text = new JTextArea();
 		if(open){
 			file.open();
 			text = new JTextArea(file.getContent());
+			history.saveStage(text.getText());
 			title = file.getFilename();
+		}
+		else{
+			history.saveStage("");
 		}
 		text.setLineWrap(true);
 		text.setEditable(true);
-		Autosave a = new Autosave(text, 100);
+		a = new Autosave(text, 100);
 		a.start();
 		textWindow = new JScrollPane(text);
 		window  = new JFrame(title);
@@ -81,19 +95,22 @@ public class TextEd {
 		window.setJMenuBar(this.createMenuBar());
 		window.add(textWindow);
 		window.setVisible(true);
+		
 	}
 	
 	public TextEd(String documentName, String path){
+		
+		history = new Cache();
 		file = new DocumentManager(documentName,path);
 		file.open();
-
 		window = new JFrame(documentName);
 		window.setSize(WIDTH,HEIGHT);
 		
 		text = new JTextArea(file.getContent());
+		history.saveStage(text.getText());
 		text.setLineWrap(true);
 		text.setEditable(true);
-		Autosave a = new Autosave(text, 100);
+		a = new Autosave(text, 100);
 		a.start();
 		textWindow = new JScrollPane(text);
 		
@@ -119,7 +136,7 @@ public class TextEd {
 	 
 
 	 public JMenu editMenu(){
-		 JMenu fileMenu = new JMenu("Edit");
+		 JMenu editMenu = new JMenu("Edit");
 		 JMenuItem cut = new JMenuItem(new AbstractAction("cut") {
 			
 			@Override
@@ -150,7 +167,9 @@ public class TextEd {
 			});
 		 JMenuItem selAll = new JMenuItem(new AbstractAction("select all") {
 				
-				@Override
+				/**
+			 * 
+			 */	@Override
 				public void actionPerformed(ActionEvent arg0) {
 					// TODO Auto-generated method stub
 					text.selectAll();
@@ -158,18 +177,43 @@ public class TextEd {
 				}
 			});
 		 
+		 JMenuItem undo = new JMenuItem(new AbstractAction("undo") {
+				
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					// TODO Auto-generated method stub
+					text.setText(history.undo());
+					a.curState = text.getText();
+				}
+			});
+		 
+		 JMenuItem redo = new JMenuItem(new AbstractAction("redo") {
+				
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					// TODO Auto-generated method stub
+					 text.setText(history.redo(text.getText()));
+					 a.curState = text.getText();
+				}
+			});
+		 
+		 
 		 cut.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.CTRL_DOWN_MASK));
 		 copy.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK));
 		 paste.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK));
 		 selAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK));
+		 undo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK));
+		 redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_DOWN_MASK));
 		 
 		 
-		 fileMenu.add(cut);
-		 fileMenu.add(copy);
-		 fileMenu.add(paste);
-		 fileMenu.add(selAll);
+		 editMenu.add(cut);
+		 editMenu.add(copy);
+		 editMenu.add(paste);
+		 editMenu.add(selAll);
+		 editMenu.add(undo);
+		 editMenu.add(redo);
 		 
-		 return fileMenu;
+		 return editMenu;
 	 }
 	 
 	 
@@ -199,8 +243,11 @@ public class TextEd {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
 					// TODO Auto-generated method stub
-					file.save(file.getDir(),file.getFilename(),text.getText());
-					
+					if(file.getDir() != null && file.getFilename() != null){
+						file.save(file.getDir(),file.getFilename(),text.getText());
+					}
+					else
+						file.save(text.getText());
 				}
 			});
 		 JMenuItem saveAsFile = new JMenuItem(new AbstractAction("save as") {

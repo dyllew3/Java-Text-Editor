@@ -3,18 +3,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Scanner;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import Caching.*;
+
 
 
 public class DocumentManager  {
@@ -95,12 +85,12 @@ public class DocumentManager  {
 	public void printText(){
 		
 	}
-
+	
+	
 	
 	
 	public void save(String content){
 		
-		if(filename == null)return;
 		try {
 			JFileChooser select = new JFileChooser();
 			JFrame display = new JFrame("Save");
@@ -145,7 +135,7 @@ public class DocumentManager  {
 	
 	public void setWordCount(){
 		
-		System.out.println(this.wordCount);
+		this.wordCount= this.text.split(" ").length;
 	}
 	
 	//sets character count based on the current text string
@@ -153,6 +143,10 @@ public class DocumentManager  {
 		String noSpace = this.text.replace(" ", "");
 		this.charCount = noSpace.split("").length;
 		
+	}
+	
+	public int getCharCount(){
+		return this.charCount;
 	}
 	
 	public String getContent(){
