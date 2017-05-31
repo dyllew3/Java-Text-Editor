@@ -149,6 +149,10 @@ public class DocumentManager  {
 		return this.charCount;
 	}
 	
+	public int getWordCount(){
+		return this.wordCount;
+	}
+	
 	public String getContent(){
 		this.open();
 		return this.text;
@@ -161,7 +165,9 @@ public class DocumentManager  {
 		return this.filename;
 	}
 	
-	public void demo(){}
+	public void setDir(String newDir){
+		this.dir = newDir;
+	}
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub

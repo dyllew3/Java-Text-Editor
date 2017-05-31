@@ -21,10 +21,16 @@ public class TextEd {
 	//Autosave class uses multithreading to save the state of the document
 	private class Autosave implements Runnable{
 		
+		
+		public static final int DEFAULTSAVEFREQ = 1000;
 		private JTextArea toSave;
 		private int saveFreq;
 		public String curState;
 		
+		
+		public Autosave(JTextArea toSave){
+			this(toSave,DEFAULTSAVEFREQ);
+		}
 		
 		public Autosave(JTextArea toSave,int saveFreq) {
 			// TODO Auto-generated constructor stub
@@ -53,7 +59,7 @@ public class TextEd {
 						curState = toSave.getText();
 						history.saveStage(curState);
 					}
-					Thread.sleep(1000);
+					Thread.sleep(saveFreq);
 				}
 				catch(InterruptedException e){
 					e.printStackTrace();
@@ -66,28 +72,42 @@ public class TextEd {
 		
 	}
 	
-	public TextEd(){
-		this(false);
-	}
 	
-	public TextEd(boolean open){
+	public TextEd(String documentName, String path,boolean open){
 		
 		history = new Cache();
-		file = new DocumentManager();
-		String title = "new";
 		text = new JTextArea();
+		text.setLineWrap(true);
+		text.setEditable(true);
+		String title = "New";
+		
+		if(documentName != null && !documentName.equals("") && (path == null || path.equals(""))){
+			file = new DocumentManager(documentName);
+			
+		}
+		else if(path != null && documentName != null && !path.equals("") && !documentName.equals("")){
+			file = new DocumentManager(documentName,path);
+			
+		}
+		else{
+			
+			
+			file = new DocumentManager();
+			if(path != null && !path.equals(""))
+				file.setDir(path);
+			
+		}
+
 		if(open){
 			file.open();
-			text = new JTextArea(file.getContent());
-			history.saveStage(text.getText());
 			title = file.getFilename();
+			text.setText(file.getContent());
+			history.saveStage(text.getText());
 		}
 		else{
 			history.saveStage("");
 		}
-		text.setLineWrap(true);
-		text.setEditable(true);
-		a = new Autosave(text, 100);
+		a = new Autosave(text);
 		a.start();
 		textWindow = new JScrollPane(text);
 		window  = new JFrame(title);
@@ -98,25 +118,20 @@ public class TextEd {
 		
 	}
 	
+	//default new text editor instance where it is a new file with no
+	public TextEd(){
+		this("","",false);
+	}
+	
+	public TextEd(boolean open){
+		
+		this("","",open);
+		
+	}
+	
 	public TextEd(String documentName, String path){
 		
-		history = new Cache();
-		file = new DocumentManager(documentName,path);
-		file.open();
-		window = new JFrame(documentName);
-		window.setSize(WIDTH,HEIGHT);
-		
-		text = new JTextArea(file.getContent());
-		history.saveStage(text.getText());
-		text.setLineWrap(true);
-		text.setEditable(true);
-		a = new Autosave(text, 100);
-		a.start();
-		textWindow = new JScrollPane(text);
-		
-		window.add(textWindow);
-		window.setJMenuBar(this.createMenuBar());
-		window.setVisible(true);
+		this(documentName,path,true);
 		
 		
 	}
@@ -245,9 +260,12 @@ public class TextEd {
 					// TODO Auto-generated method stub
 					if(file.getDir() != null && file.getFilename() != null){
 						file.save(file.getDir(),file.getFilename(),text.getText());
+						//if new file change the title to reflect new name
+						window.setTitle(file.getFilename());
 					}
 					else
 						file.save(text.getText());
+					
 				}
 			});
 		 JMenuItem saveAsFile = new JMenuItem(new AbstractAction("save as") {
